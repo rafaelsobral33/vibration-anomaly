@@ -12,6 +12,9 @@ wheels/
 # Data folder
 data/
 
+# Plots folder
+plots/
+
 # Data files
 *.parquet
 *.json

@@ -61,13 +61,14 @@ class TimeSeries(BaseModel):
 
 class Weights(BaseModel):
     fitted: bool = False
-    mean: float = 0.0
-    std: float = 1.0
-
+    mean_vector: list[float] | None = None
+    inv_covariance: list[list[float]] | None = None
+    dynamic_threshold: float | None = None
 
 class ModelParams(BaseModel):
     z_threshold: int = 3
     window_anomaly_ratio: float = 0.2
+    mahalanobis_mean_threshold: float = 3.55
 
 
 class PipelineParams(BaseModel):

@@ -3,9 +3,19 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from .interface import ModelParams, PredictOutput, TimeSeries, Weights
+from .interface import ModelParams, PipelineParams, PredictOutput, TimeSeries, Weights
 
 DEFAULT_PARAMS_PATH = Path("hyperparameters/model_hyperparams.yaml")
+DEFAULT_PIPELINE_PARAMS_PATH = Path("hyperparameters/pipeline_hyperparams.yaml")
+
+
+def load_pipeline_params(path: Path = DEFAULT_PIPELINE_PARAMS_PATH) -> PipelineParams:
+    """Load pipeline hyperparameters from YAML. Falls back to PipelineParams defaults if file missing."""
+    if not path.exists():
+        return PipelineParams()
+    with open(path) as f:
+        data = yaml.safe_load(f) or {}
+    return PipelineParams(**data)
 
 
 def load_model_params(path: Path = DEFAULT_PARAMS_PATH) -> ModelParams:
@@ -16,39 +26,46 @@ def load_model_params(path: Path = DEFAULT_PARAMS_PATH) -> ModelParams:
         data = yaml.safe_load(f) or {}
     return ModelParams(**data)
 
-
 class AnomalyModel:
-    def __init__(self, params_path: Path | None = None):
+    def __init__(self,
+        pipeline_params: PipelineParams | None = None,
+        params_path: Path | None = None):
+        
         self.weights = Weights()
         self.params = load_model_params(params_path or DEFAULT_PARAMS_PATH)
+        self.pipeline_params = load_pipeline_params(pipeline_params or DEFAULT_PIPELINE_PARAMS_PATH)
 
     def _featuring(self, samples: TimeSeries) -> np.ndarray:
         if not samples.data:
-            return np.array([], dtype=float)
+            return np.empty((0, 6), dtype=float)
 
-        ordered = sorted(samples.data, key=lambda p: p.timestamp)
+        valid_samples = [p for p in samples.data if p.uptime]
+        if not valid_samples:
+            return np.empty((0, 6), dtype=float)
 
-        vel = np.array([(p.vel_x, p.vel_y, p.vel_z) for p in ordered], dtype=float)
+        ordered = sorted(valid_samples, key=lambda p: p.timestamp)
 
-        return np.linalg.norm(vel, axis=1)
+        features = np.array([
+            (p.vel_x, p.vel_y, p.vel_z, p.acc_x, p.acc_y, p.acc_z) 
+            for p in ordered
+        ], dtype=float)
+
+        return features
 
     def fit(self, fitting_samples: TimeSeries) -> None:
         X = self._featuring(fitting_samples)
+        
+        if len(X) < 2:
+            raise ValueError("Dados operacionais insuficientes no arquivo de fit para calibração.")
 
+        mean_vec = np.mean(X, axis=0)
+        inv_cov = np.linalg.pinv(np.cov(X, rowvar=False))
+        
         self.weights = Weights(
             fitted=True,
-            mean=round(X.mean(), 3),
-            std=round(X.std(), 3),
+            mean_vector=mean_vec.tolist(),
+            inv_covariance=inv_cov.tolist()
         )
-
-    def _zscore(self, X: np.ndarray) -> np.ndarray:
-        w = self.weights
-        return np.abs((X - w.mean) / w.std)
-
-    def _window_deviation_ratio(self, X: np.ndarray) -> float:
-        z = self._zscore(X)
-        anomalous_points = z > self.params.z_threshold
-        return float(np.sum(anomalous_points) / len(z))
 
     def predict(self, samples: TimeSeries) -> PredictOutput:
         if not self.weights.fitted:
@@ -57,10 +74,31 @@ class AnomalyModel:
             raise ValueError("Cannot predict on empty TimeSeries")
 
         X = self._featuring(samples)
-        deviation_ratio = self._window_deviation_ratio(X)
-        is_anomalous = deviation_ratio >= self.params.window_anomaly_ratio
+        
+        if len(X) <= 6:
+            return PredictOutput(
+                anomaly_status=False,
+                timestamp=samples.data[-1].timestamp,
+                anomaly_score=0.0
+            )
+
+        mean_vector = np.array(self.weights.mean_vector)
+        inv_covariance = np.array(self.weights.inv_covariance)
+
+        delta = X - mean_vector
+        distances = np.sqrt(np.sum(np.dot(delta, inv_covariance) * delta, axis=1))
+
+        window_score = float(np.mean(distances))
+        
+        is_anomalous = window_score > self.params.mahalanobis_mean_threshold
+
+        if is_anomalous:
+            print("sample_size:", len(X))
+            print("score:", window_score)
+            print("timestamp:", samples.data[-1].timestamp)
 
         return PredictOutput(
             anomaly_status=is_anomalous,
             timestamp=samples.data[-1].timestamp,
+            anomaly_score=window_score
         )

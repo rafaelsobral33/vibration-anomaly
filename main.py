@@ -47,6 +47,7 @@ def main():
     scenarios = load_all_scenarios()
 
     for i, (fit_ts, predict_ts, true_incidents) in enumerate(scenarios, start=1):
+        print("Máquina", i)
         metrics, preds = run_experiment(
             fit_ts,
             predict_ts,
@@ -66,6 +67,10 @@ def main():
                 decisions=all_predictions[f"scenario_{i}"],
                 title=f"scenario_{i}",
             )
+
+        # Pausa o terminal e aguarda o Enter do usuário
+        #input("\nPressione [Enter] para continuar para a próxima máquina...")
+        print("-" * 50)  # Uma linha visual para separar os logs de cada máquina
 
     general_metric = aggregate_results(results)
 
