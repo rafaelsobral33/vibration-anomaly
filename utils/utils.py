@@ -377,14 +377,19 @@ def plot_sensor_with_incidents(
     if decisions is not None:
         for d in decisions:
             if not d.alert:
-                continue
+                if d.message=="System already entered abnormal state earlier. Updating persistent anomaly timestamp.":
+                    color="green"
+                else:
+                    continue
+            else:
+                color="blue"
             end_ts = pd.to_datetime(d.timestamp, utc=True)
             fig.add_trace(
                 go.Scatter(
                     x=[end_ts, end_ts],
                     y=[vel_min, vel_max],
                     mode="lines",
-                    line=dict(color="blue", width=2, dash="dash"),
+                    line=dict(color=color, width=2, dash="dash"),
                     name="Pipeline Alert",
                     legendgroup="pipeline_alert",
                     showlegend=first_alert_legend,
@@ -397,7 +402,7 @@ def plot_sensor_with_incidents(
                     x=[end_ts, end_ts],
                     y=[acc_min, acc_max],
                     mode="lines",
-                    line=dict(color="blue", width=2, dash="dash"),
+                    line=dict(color=color, width=2, dash="dash"),
                     name="Pipeline Alert",
                     legendgroup="pipeline_alert",
                     showlegend=False,
