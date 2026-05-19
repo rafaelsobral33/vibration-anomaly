@@ -62,7 +62,29 @@ def load_all_scenarios(
 
     return scenarios
 
-
 def save_metrics(metrics: Dict, path: Path) -> None:
+    # Se o arquivo já existir, tenta ler os dados antigos para comparar
+    if path.exists():
+        try:
+            with open(path, "r") as f:
+                old_metrics = json.load(f)
+            
+            # Compara as métricas específicas
+            for key in ["TP", "FP", "FN", "TP_total", "FP_total", "FN_total"]:
+                old_val = old_metrics.get(key, 0)
+                new_val = metrics.get(key, 0)
+                
+                if old_val != new_val:
+                    diff = new_val - old_val
+                    sinal = "+" if diff > 0 else ""
+                    print(f"[{path.name}] Mudança em {key}: foi de {old_val} para {new_val} ({sinal}{diff})")
+                    
+        except json.JSONDecodeError:
+            print(f"[{path.name}] Aviso: Arquivo anterior estava vazio ou com JSON inválido. Ignorando comparação.")
+        except Exception as e:
+            print(f"[{path.name}] Aviso: Erro ao tentar ler arquivo antigo: {e}")
+
+    # Sobrescreve/salva o novo JSON
     with open(path, "w") as f:
-        json.dump(metrics, f)
+        # Recomendo usar indent=4 para o arquivo ficar mais legível para humanos
+        json.dump(metrics, f, indent=4)

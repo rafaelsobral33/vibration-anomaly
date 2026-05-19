@@ -60,7 +60,8 @@ class AnomalyModel:
 
         mean_vec = np.mean(X, axis=0)
         inv_cov = np.linalg.pinv(np.cov(X, rowvar=False))
-        
+        print("Médias:", mean_vec)
+
         self.weights = Weights(
             fitted=True,
             mean_vector=mean_vec.tolist(),
@@ -75,7 +76,7 @@ class AnomalyModel:
 
         X = self._featuring(samples)
         
-        if len(X) <= 6:
+        if len(X) <= len(samples.data)/2:
             return PredictOutput(
                 anomaly_status=False,
                 timestamp=samples.data[-1].timestamp,
@@ -87,12 +88,15 @@ class AnomalyModel:
 
         delta = X - mean_vector
         distances = np.sqrt(np.sum(np.dot(delta, inv_covariance) * delta, axis=1))
-
+        #print("distances", np.shape(distances))
         window_score = float(np.mean(distances))
         
-        is_anomalous = window_score > self.params.mahalanobis_mean_threshold
-        #is_anomalous = np.sum(distances > self.params.mahalanobis_mean_threshold)/len(X)>=0.5
+        #is_anomalous = window_score > self.params.mahalanobis_mean_threshold
+        is_anomalous = np.sum(distances > self.params.mahalanobis_mean_threshold)/len(X)>=0.5
         
+        #print(samples.data[-1].timestamp)
+        #print("distances_mean", np.sqrt(np.abs(np.sum(np.dot(delta, inv_covariance) * delta, axis=0))))   
+
         #if is_anomalous:
          #   print("sample_size:", len(X))
          #   print("score:", window_score)
