@@ -379,10 +379,15 @@ def plot_sensor_with_incidents(
             if not d.alert:
                 if d.message=="System already entered abnormal state earlier. Updating persistent anomaly timestamp.":
                     color="green"
+                elif d.message=="First anomaly detected. Waiting for consecutive confirmation to alert.":
+                    color="yellow"
                 else:
                     continue
             else:
-                color="blue"
+                if "Anomaly worsened significantly" in d.message:
+                    color="red"
+                else:
+                    color="blue"
             end_ts = pd.to_datetime(d.timestamp, utc=True)
             fig.add_trace(
                 go.Scatter(

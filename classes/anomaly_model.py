@@ -91,11 +91,12 @@ class AnomalyModel:
         window_score = float(np.mean(distances))
         
         is_anomalous = window_score > self.params.mahalanobis_mean_threshold
-
-        if is_anomalous:
-            print("sample_size:", len(X))
-            print("score:", window_score)
-            print("timestamp:", samples.data[-1].timestamp)
+        #is_anomalous = np.sum(distances > self.params.mahalanobis_mean_threshold)/len(X)>=0.5
+        
+        #if is_anomalous:
+         #   print("sample_size:", len(X))
+         #   print("score:", window_score)
+         #   print("timestamp:", samples.data[-1].timestamp)
 
         return PredictOutput(
             anomaly_status=is_anomalous,
