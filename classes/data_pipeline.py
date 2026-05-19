@@ -57,9 +57,8 @@ class AnomalyPipeline:
             points_in_window = [
                 p for p in ordered if window_start <= p.timestamp < window_end
             ]
-            if not points_in_window:
-                break
-            windows.append(TimeSeries(data=points_in_window))
+            if points_in_window:
+                windows.append(TimeSeries(data=points_in_window))
             if window_end > last_ts:
                 break
             window_start += step
