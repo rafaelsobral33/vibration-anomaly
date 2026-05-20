@@ -70,6 +70,10 @@ class ModelParams(BaseModel):
     window_anomaly_ratio: float = 0.2
     mahalanobis_mean_threshold: float = 3.55
 
+class AlertEngineParams(BaseModel):
+    hours_to_clear: int = 12
+    increase_to_realert: float = 3.0
+    consecutive_anomalies_to_alert: int = 2
 
 class PipelineParams(BaseModel):
     model_window_size_hours: float = 4.0

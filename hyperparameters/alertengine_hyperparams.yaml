@@ -1,0 +1,4 @@
+# Alert Engine hyperparameters
+hours_to_clear: 12
+increase_to_realert: 3.0
+consecutive_anomalies_to_alert: 2
