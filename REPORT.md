@@ -9,14 +9,18 @@ The baseline model presented severe limitations on how it consumes and interpret
 * **Directionality Loss:** Rotating machines experience different absolute velocity values along their axes. Compressing this into one scalar value can mask failures that manifest as a change in velocity along only one or two main axes, while the overall velocity doesn't present a significant change - such as, for example, misalignment or unbalance.
 * **Omission of the Acceleration data:** Mathematically, velocity acts as a low-pass filter in relation to acceleration - since the former is the integration of the latter over time. Hence, both convey information about different physical phenomena, and acceleration data, ignored in the baseline implementation, is responsible for identifying high-frequency, low-energy incidents such as micro-cracking in bearings.
 
-Besides these issues, the baseline implementation contains two other main concerns. The first one is the usage of the entirety of the data for both `fit` and `predict` stages, without filtering out information from when the machine was turned off (`uptime = False`). This data, even though not absolute zero, is basically noise, corrupting the baseline by changing the expected values calculated for the features and generating false positives by predicting failures when the rotor is simply not even working. The second one is that even though the *Z-Score* is computed for the absolute velocity, no quantitative value is returned by the model. This prevents the assessment of the worsening of the problem, which is necessary for the re-alert on escalation.
+Besides these issues, the baseline implementation contains two other main concerns. The first one is the usage of the entirety of the data for both `fit` and `predict` stages, without filtering out information from when the machine was turned off (`uptime = False`). This data, even though not absolute zero, is basically noise, corrupting the baseline by changing the expected values calculated for the features and generating false positives by predicting failures when the rotor is simply not even working - as shown in Figure 1. The second one is that even though the *Z-Score* is computed for the absolute velocity, no quantitative value is returned by the model. This prevents the assessment of the worsening of the problem, which is necessary for the re-alert on escalation.
+
+![Figure 1: False Positive during downtime for scenario 3.](./images/pred_baseline_downtime.png)
 
 ### 1.2. `AlertEngine`
 
 The temporal logic applied to the predictions received from the `AnomalyModel` was incompatible with the purpose of the task for two main reasons:
 
-* **Definitive Blockage of New Alerts:** For each sample being predicted, after the first alert was triggered, no other alert could be fired since the locked state became permanent in the code. This causes a permanent blindness in the system — if the degradation increases or if the incident state is reversed after a certain period, there is no way for the user to detect it. Hence, no re-alerts could be fired.
+* **Definitive Blockage of New Alerts:** For each sample being predicted, after the first alert was triggered, no other alert could be fired since the locked state became permanent in the code. This causes a permanent blindness in the system — if the degradation increases or if the incident state is reversed after a certain period, there is no way for the user to detect it. Hence, no re-alerts could be fired - and one example can be seen in Figure 2, in which even though the original pipeline would have generated an alarm during the incidents, a previous False Positive prevented it from happening.
 * **Immediate Trigger Without Temporal Confirmation:** The alert was being triggered instantaneously by the `predict` method based on a single anomalous window. Transient non-destructive mechanical shocks or the oscillation of the metrics when the machine is being turned on can be responsible for a single firing of the `AnomalyModel`.
+
+![Figure 2: Previous False Positive alert for scenario 7 prevented the two True Positives to be triggered.](./images/pred_baseline_block.png)
 
 ### 1.3. Initial Metrics
 
@@ -52,7 +56,6 @@ The `AlertEngine` was refactored to operate as a robust state machine, capable o
 * **Noise Suppression by Temporal Buffering:** To avoid the instantaneous firing of alerts, a consecutive alert gateway was implemented. A minimum number of consecutive windows must be tagged as anomalous for an alert to be fired. If a normal window is detected within this interval, the counter resets. For this problem, the optimal threshold was found to be two consecutive windows. While this may seem like a minor change given the overlapping nature of the windows, it proved sufficient to suppress enough false positives to justify the implementation.
 * **Escalation Mechanism (Re-alert):** The window score implemented in `AnomalyModel` is used to track the anomaly level at the moment an alert is triggered and compare it to the current instantaneous score. If the score increases by a constant factor relative to the initial alert, the alert is reactivated to warn the operator that the condition has aggravated, and the threshold is updated to prevent redundant continuous warnings.
 * **Alert Unblocking:** A *forgetting mechanism* was defined: if the machine operates for a long period without anomaly states being detected after an alert, the system concludes that it has returned to a normal state and the lock is lifted. For this problem, the optimal period was found to be 12 hours.
-
 
 ### 2.3. Hyperparameter Tuning
 
@@ -90,9 +93,11 @@ The consolidated analysis of all 29 incidents present in the dataset reveals the
 The detailed investigation of the behavior of the model by machine has validated some of the choices made and provided valuable diagnoses about the nature of the False Positives:
 
 * **Noise Suppression Validation:** The pipeline implemented in `AlertEngine` has proven its value by suppressing spurious alerts that otherwise would have happened in samples 1 and 8.
-* **The Early Alerts Phenomenon:** In four machines (3, 6, 21, and 26), the failure was identified slightly before the incident window marked in the provided data. In all of these cases, the failure worsened significantly as time passed, and in three of these cases, the re-alert strategy fired within the incident window - marking them as both False Positives and True Positives for the same faulty behavior.
+* **The Early Alerts Phenomenon:** In four machines (3, 6, 21, and 26), the failure was identified slightly before the incident window marked in the provided data. In all of these cases, the failure worsened significantly as time passed, and in three of these cases, the re-alert strategy fired within the incident window - marking them as both False Positives and True Positives for the same faulty behavior. This mechanism can be clearly seem in Figure 3, which depicts the pipeline prediction for scenario 21.
 * **False Positive Concentration:** The distribution of the False Positives shows that **13** out of all 19 were concentrated in just 3 files - with a special highlight to sample 5, which had a total of 8. This behavior shows that the model presents a specific hypersensitivity to the particular vibration profiles of these three machines, rather than a general weakness of the algorithm.
 * **Explicability:** For the True Positives, the implementation of the explicability mechanism has shown great correlation with the visual assessment of the actual behavior of the data. This has proven that it was possible to turn the analytical analysis into an actionable notification for the maintainance team with the source of the problem.
+
+![Figure 3: Re-alert upon escalation within the incident window for scenario 21.](./images/pred_final_realert.png)
 
 ## 4. Limitations and Future Work
 
