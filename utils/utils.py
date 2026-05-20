@@ -264,78 +264,83 @@ def plot_sensor_with_incidents(
     )
 
     # Velocity RMS (row 1)
-    fig.add_trace(go.Scatter(x=df["sampled_at"], y=df["vel_rms_x"], name="vel_x", line=dict(width=1)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df["sampled_at"], y=df["vel_rms_y"], name="vel_y", line=dict(width=1)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df["sampled_at"], y=df["vel_rms_z"], name="vel_z", line=dict(width=1)), row=1, col=1)
+    fig.add_trace(
+        go.Scatter(
+            x=df["sampled_at"],
+            y=df["vel_rms_x"],
+            name="vel_x",
+            line=dict(width=1),
+        ),
+        row=1,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df["sampled_at"],
+            y=df["vel_rms_y"],
+            name="vel_y",
+            line=dict(width=1),
+        ),
+        row=1,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df["sampled_at"],
+            y=df["vel_rms_z"],
+            name="vel_z",
+            line=dict(width=1),
+        ),
+        row=1,
+        col=1,
+    )
 
     # Acceleration RMS (row 2)
-    fig.add_trace(go.Scatter(x=df["sampled_at"], y=df["accel_rms_x"], name="acc_x", line=dict(width=1)), row=2, col=1)
-    fig.add_trace(go.Scatter(x=df["sampled_at"], y=df["accel_rms_y"], name="acc_y", line=dict(width=1)), row=2, col=1)
-    fig.add_trace(go.Scatter(x=df["sampled_at"], y=df["accel_rms_z"], name="acc_z", line=dict(width=1)), row=2, col=1)
+    fig.add_trace(
+        go.Scatter(
+            x=df["sampled_at"],
+            y=df["accel_rms_x"],
+            name="acc_x",
+            line=dict(width=1),
+        ),
+        row=2,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df["sampled_at"],
+            y=df["accel_rms_y"],
+            name="acc_y",
+            line=dict(width=1),
+        ),
+        row=2,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df["sampled_at"],
+            y=df["accel_rms_z"],
+            name="acc_z",
+            line=dict(width=1),
+        ),
+        row=2,
+        col=1,
+    )
 
     vel_min = min(df["vel_rms_x"].min(), df["vel_rms_y"].min(), df["vel_rms_z"].min())
     vel_max = max(df["vel_rms_x"].max(), df["vel_rms_y"].max(), df["vel_rms_z"].max())
-    acc_min = min(df["accel_rms_x"].min(), df["accel_rms_y"].min(), df["accel_rms_z"].min())
-    acc_max = max(df["accel_rms_x"].max(), df["accel_rms_y"].max(), df["accel_rms_z"].max())
+    acc_min = min(
+        df["accel_rms_x"].min(),
+        df["accel_rms_y"].min(),
+        df["accel_rms_z"].min(),
+    )
+    acc_max = max(
+        df["accel_rms_x"].max(),
+        df["accel_rms_y"].max(),
+        df["accel_rms_z"].max(),
+    )
 
-    # --- NOVO: Cálculo dos Intervalos de Downtime (uptime == False) ---
-    downtime_intervals = []
-    if "uptime" in df.columns:
-        # Cria uma série booleana indicando se mudou de estado para agrupar blocos consecutivos
-        is_down = df["uptime"] == False
-        # Identifica grupos consecutivos de False
-        df["down_group"] = (is_down != is_down.shift()).cumsum()
-        
-        # Filtra apenas os grupos que são efetivamente downtime e extrai o início e fim
-        groups = df[is_down].groupby("down_group")["sampled_at"]
-        for _, group in groups:
-            downtime_intervals.append((group.min(), group.max()))
-        
-        # Remove a coluna temporária para não sujar o DataFrame original
-        df.drop(columns=["down_group"], inplace=True)
-
-    # --- Plotar Intervalos de Downtime (Amarelo) ---
-    first_downtime_legend = True
-    for start, end in downtime_intervals:
-        start_dt = pd.to_datetime(start, utc=True)
-        end_dt = pd.to_datetime(end, utc=True)
-        
-        # Subplot 1
-        fig.add_trace(
-            go.Scatter(
-                x=[start_dt, start_dt, end_dt, end_dt, start_dt],
-                y=[vel_min, vel_max, vel_max, vel_min, vel_min],
-                fill="toself",
-                mode="lines",
-                line=dict(width=0),
-                fillcolor="rgba(255, 215, 0, 0.25)",  # Amarelo/Dourado transparente
-                name="Downtime (Uptime=False)",
-                legendgroup="downtime",
-                showlegend=first_downtime_legend,
-            ),
-            row=1,
-            col=1,
-        )
-        # Subplot 2
-        fig.add_trace(
-            go.Scatter(
-                x=[start_dt, start_dt, end_dt, end_dt, start_dt],
-                y=[acc_min, acc_max, acc_max, acc_min, acc_min],
-                fill="toself",
-                mode="lines",
-                line=dict(width=0),
-                fillcolor="rgba(255, 215, 0, 0.25)",
-                name="Downtime (Uptime=False)",
-                legendgroup="downtime",
-                showlegend=False,
-            ),
-            row=2,
-            col=1,
-        )
-        first_downtime_legend = False
-    # -------------------------------------------------------------
-
-    # True incidents as Scatter traces
+    # True incidents as Scatter traces (so legend toggle shows/hides them)
     first_incident_legend = True
     for inc in true_incidents:
         start = pd.to_datetime(inc.start, utc=True)
@@ -372,29 +377,18 @@ def plot_sensor_with_incidents(
         )
         first_incident_legend = False
 
-    # Pipeline Alerts
     first_alert_legend = True
     if decisions is not None:
         for d in decisions:
             if not d.alert:
-                if d.message=="System already entered abnormal state earlier. Updating persistent anomaly timestamp.":
-                    color="green"
-                elif d.message=="First anomaly detected. Waiting for consecutive confirmation to alert.":
-                    color="yellow"
-                else:
-                    continue
-            else:
-                if "Anomaly worsened significantly" in d.message:
-                    color="red"
-                else:
-                    color="blue"
+                continue
             end_ts = pd.to_datetime(d.timestamp, utc=True)
             fig.add_trace(
                 go.Scatter(
                     x=[end_ts, end_ts],
                     y=[vel_min, vel_max],
                     mode="lines",
-                    line=dict(color=color, width=2, dash="dash"),
+                    line=dict(color="blue", width=2, dash="dash"),
                     name="Pipeline Alert",
                     legendgroup="pipeline_alert",
                     showlegend=first_alert_legend,
@@ -407,7 +401,7 @@ def plot_sensor_with_incidents(
                     x=[end_ts, end_ts],
                     y=[acc_min, acc_max],
                     mode="lines",
-                    line=dict(color=color, width=2, dash="dash"),
+                    line=dict(color="blue", width=2, dash="dash"),
                     name="Pipeline Alert",
                     legendgroup="pipeline_alert",
                     showlegend=False,
@@ -438,7 +432,4 @@ def plot_sensor_with_incidents(
 
     if return_figure:
         return fig
-    if 'fit' in title:
-        fig.write_html('plots/fit/'+title+'.html')
-    else:
-        fig.write_html('plots/pred/'+title+'.html')
+    fig.show()

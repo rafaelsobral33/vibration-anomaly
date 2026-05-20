@@ -46,13 +46,7 @@ def main():
     all_predictions = {}
     scenarios = load_all_scenarios()
 
-    scenarios_with_tp = []
-    scenarios_with_fp = []
-    scenarios_with_fn = []
-
     for i, (fit_ts, predict_ts, true_incidents) in enumerate(scenarios, start=1):
-        print("Máquina", i)
-        
         metrics, preds = run_experiment(
             fit_ts,
             predict_ts,
@@ -61,18 +55,6 @@ def main():
 
         results[f"scenario_{i}"] = metrics
         all_predictions[f"scenario_{i}"] = preds
-
-        tp_count = metrics.get("TP", 0)
-        fp_count = metrics.get("FP", 0)
-        fn_count = metrics.get("FN", 0)
-
-        # Se a máquina atual registrou a ocorrência, guarda o índice 'i'
-        if tp_count > 0:
-            scenarios_with_tp.append(i)
-        if fp_count > 0:
-            scenarios_with_fp.append(i)
-        if fn_count > 0:
-            scenarios_with_fn.append(i)
 
         if save_metrics_flag:
             save_metrics(metrics, args.output_dir / f"metrics_scenario_{i}.json")
@@ -85,14 +67,7 @@ def main():
                 title=f"scenario_{i}",
             )
 
-        #input("\nPressione [Enter] para continuar para a próxima máquina...")
-        print("-" * 50)
-
     general_metric = aggregate_results(results)
-
-    general_metric["scenarios_with_tp"] = scenarios_with_tp
-    general_metric["scenarios_with_fp"] = scenarios_with_fp
-    general_metric["scenarios_with_fn"] = scenarios_with_fn
 
     if save_metrics_flag:
         save_metrics(
@@ -101,6 +76,7 @@ def main():
         )
 
     return results, general_metric
+
 
 if __name__ == "__main__":
     main()
