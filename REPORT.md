@@ -12,6 +12,7 @@ The baseline model presented severe limitations on how it consumes and interpret
 Besides these issues, the baseline implementation contains two other main concerns. The first one is the usage of the entirety of the data for both `fit` and `predict` stages, without filtering out information from when the machine was turned off (`uptime = False`). This data, even though not absolute zero, is basically noise, corrupting the baseline by changing the expected values calculated for the features and generating false positives by predicting failures when the rotor is simply not even working - as shown in Figure 1. The second one is that even though the *Z-Score* is computed for the absolute velocity, no quantitative value is returned by the model. This prevents the assessment of the worsening of the problem, which is necessary for the re-alert on escalation.
 
 ![Figure 1: False Positive during downtime for scenario 3.](./images/pred_baseline_downtime.png)
+*Figure 1: False Positive during downtime for scenario 3.*
 
 ### 1.2. `AlertEngine`
 
@@ -21,6 +22,7 @@ The temporal logic applied to the predictions received from the `AnomalyModel` w
 * **Immediate Trigger Without Temporal Confirmation:** The alert was being triggered instantaneously by the `predict` method based on a single anomalous window. Transient non-destructive mechanical shocks or the oscillation of the metrics when the machine is being turned on can be responsible for a single firing of the `AnomalyModel`.
 
 ![Figure 2: Previous False Positive alert for scenario 7 prevented the two True Positives to be triggered.](./images/pred_baseline_block.png)
+*Figure 2: Previous False Positive alert for scenario 7 prevented the two True Positives to be triggered.*
 
 ### 1.3. Initial Metrics
 
@@ -41,9 +43,21 @@ The feature extraction and fit algorithms were completely replaced to better cap
 
 * **Multivariate Integration (6D):** The model now ingests all velocity and acceleration data simultaneously.
 * **Baseline Sanitization:** A filter was implemented to keep only samples in which the machine was running (`uptime == True`), both in `fit` and `predict` stages. Furthermore, a window is only considered as a potential anomaly if more than half of its samples were captured while the machine was running. Otherwise, the window is skipped.
-* **Mahalanobis Distance (MD):** Initially, both the *Z-Score* approach applied to all six variables independently and the Mahalanobis Distance (MD) were implemented and tested against each other. Throughout all developmental stages, the MD performed better due to its capability of extracting correlation information between the vibration directions.
+* **Mahalanobis Distance (MD):** Initially, both the *Z-Score* approach applied to all six variables independently and the Mahalanobis Distance (MD) were implemented and tested against each other. Throughout all developmental stages, the MD performed better due to its capability of extracting correlation information between the vibration directions and was chosen as the main metrics to solve the problem.
 
-> **What is the Mahalanobis Distance?** (Add better explanation here with the formula)
+> **Mahalanobis Distance**
+>
+> The Mahalanobis Distance ($MD$) quantifies the distance between an observation vector and a multivariate data distribution but, unlike the standard Euclidean distance, it accounts for the variance of each individual variable and the covariance between them. It is mathematically defined as:
+>
+> $$MD(\vec{x}) = \sqrt{(\vec{x} - \vec{\mu})^T \Sigma^{-1} (\vec{x} - \vec{\mu})}$$
+> 
+> Where:
+> * $\vec{x}$ is the observation vector (in this case, it's the 6D array of velocity and acceleration readings).
+> * $\vec{\mu}$ is the mean vector of the baseline distribution.
+> * $\Sigma^{-1}$ is the inverse of the covariance matrix of the baseline data.
+> * $(\vec{x} - \vec{\mu})^T$ is the transpose of the mean-centered observation.
+> 
+> By utilizing the inverse covariance matrix ($\Sigma^{-1}$), the metric normalizes the multidimensional space. It effectively penalizes deviations that break the historical correlation between the axes (e.g., a sudden peak in the Z-axis while X and Y remain stable), making it exceptionally sensitive to directional mechanical faults that would otherwise be hidden by the natural vibration variance.
 
 * **Strategy Assessment:** Other models, such as *Isolation Forest*, were considered in early stages but discarded due to the superior performance of the MD strategy, the need for explainable results that could be acted upon and the time necessary to perform its tuning.
 * **Window Score Calculation:** The model now exports a numerical continuous score, computed as the average of the MDs of the samples within the window. This approach was defined through empirical testing, which showed that the average—even though skewed by extreme samples—offered a more stable representation of the window than the maximum value (too sensitive to outliers) or percentile-based approaches (too few samples per window).
@@ -98,6 +112,7 @@ The detailed investigation of the behavior of the model by machine has validated
 * **Explicability:** For the True Positives, the implementation of the explicability mechanism has shown great correlation with the visual assessment of the actual behavior of the data. This has proven that it was possible to turn the analytical analysis into an actionable notification for the maintainance team with the source of the problem.
 
 ![Figure 3: Re-alert upon escalation within the incident window for scenario 21.](./images/pred_final_realert.png)
+*Figure 3: Re-alert upon escalation within the incident window for scenario 21.*
 
 ## 4. Limitations and Future Work
 
