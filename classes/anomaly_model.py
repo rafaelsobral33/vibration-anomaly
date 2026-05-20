@@ -94,6 +94,24 @@ class AnomalyModel:
         #is_anomalous = window_score > self.params.mahalanobis_mean_threshold
         is_anomalous = np.sum(distances > self.params.mahalanobis_mean_threshold)/len(X)>=0.5
         
+        
+        if is_anomalous:
+            responsibles = []
+            rotated_delta = np.dot(delta, inv_covariance)
+
+            contributions_sq = delta * rotated_delta
+            mean_contributions = np.mean(contributions_sq, axis=0)
+            total_d2 = np.sum(mean_contributions) 
+            
+            importance_percentages = (mean_contributions / total_d2) * 100 if total_d2 > 0 else np.zeros(6)
+            
+            feature_names = ["vel_x", "vel_y", "vel_z", "acc_x", "acc_y", "acc_z"]
+            fault_threshold = 25.0 # Limiar de corte
+            
+            for i, name in enumerate(feature_names):
+                if importance_percentages[i] >= fault_threshold:
+                    responsibles.append(name)
+
         #print(samples.data[-1].timestamp)
         #print("distances_mean", np.sqrt(np.abs(np.sum(np.dot(delta, inv_covariance) * delta, axis=0))))   
 
@@ -104,6 +122,7 @@ class AnomalyModel:
 
         return PredictOutput(
             anomaly_status=is_anomalous,
+            anomaly_score=window_score,
+            anomaly_responsibles=responsibles,
             timestamp=samples.data[-1].timestamp,
-            anomaly_score=window_score
         )

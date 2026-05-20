@@ -78,8 +78,9 @@ class PipelineParams(BaseModel):
 
 class PredictOutput(BaseModel):
     anomaly_status: bool
-    timestamp: datetime
     anomaly_score: float
+    anomaly_responsibles: list[str]
+    timestamp: datetime
 
 
 class AlertDecision(BaseModel):

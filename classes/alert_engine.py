@@ -23,11 +23,12 @@ class AlertEngine:
                 
                 if self.anomaly_score is not None and current_score >= 3 * self.anomaly_score:
                     self.anomaly_score = current_score 
+                    causes_str = ", ".join(prediction.explanations)
 
                     return AlertDecision(
                         alert=True,  
                         timestamp=current_time,
-                        message=f"Anomaly worsened significantly. Score increased to {current_score}.",
+                        message=f"Anomaly worsened significantly. Score increased to {current_score:.2f}. Causes: {causes_str}.",
                     )
 
                 return AlertDecision(
@@ -58,7 +59,8 @@ class AlertEngine:
 
         if has_anomaly:
             self.consecutive_alerts += 1
-            
+            causes_str = ", ".join(prediction.explanations)
+
             if self.consecutive_alerts >= 2:
                 self.last_alert_timestamp = current_time
                 self.locked = True
@@ -67,14 +69,23 @@ class AlertEngine:
                 return AlertDecision(
                     alert=True,
                     timestamp=current_time,
-                    message=f"Abnormal vibration confirmed (2 consecutive). Initial score of {self.anomaly_score}.",
+                    message=f"Abnormal vibration confirmed. Initial score of {self.anomaly_score:.2f}. Causes: {causes_str}.",
                 )
             else:
                 return AlertDecision(
                     alert=False,
                     timestamp=current_time,
-                    message="First anomaly detected. Waiting for consecutive confirmation to alert.",
+                    # Útil incluir aqui também para facilitar o debug caso o alarme não se confirme depois
+                    message=f"First anomaly detected (Causes: {causes_str}). Waiting for consecutive confirmation to alert.",
                 )
+
+        if self.consecutive_alerts > 0:
+            self.consecutive_alerts = 0
+            return AlertDecision(
+                alert=False,
+                timestamp=current_time,
+                message="Previous anomaly not confirmed. Treated as a transient spike/false positive.",
+            )
 
         self.consecutive_alerts = 0
         
