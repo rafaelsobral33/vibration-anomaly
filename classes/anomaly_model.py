@@ -76,11 +76,14 @@ class AnomalyModel:
 
         X = self._featuring(samples)
         
+        responsibles = []
+
         if len(X) <= len(samples.data)/2:
             return PredictOutput(
                 anomaly_status=False,
+                anomaly_score=0.0,
+                anomaly_responsibles=responsibles,
                 timestamp=samples.data[-1].timestamp,
-                anomaly_score=0.0
             )
 
         mean_vector = np.array(self.weights.mean_vector)
@@ -94,9 +97,7 @@ class AnomalyModel:
         #is_anomalous = window_score > self.params.mahalanobis_mean_threshold
         is_anomalous = np.sum(distances > self.params.mahalanobis_mean_threshold)/len(X)>=0.5
         
-        
         if is_anomalous:
-            responsibles = []
             rotated_delta = np.dot(delta, inv_covariance)
 
             contributions_sq = delta * rotated_delta

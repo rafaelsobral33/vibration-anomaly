@@ -23,7 +23,7 @@ class AlertEngine:
                 
                 if self.anomaly_score is not None and current_score >= 3 * self.anomaly_score:
                     self.anomaly_score = current_score 
-                    causes_str = ", ".join(prediction.explanations)
+                    causes_str = ", ".join(prediction.anomaly_responsibles)
 
                     return AlertDecision(
                         alert=True,  
@@ -59,7 +59,7 @@ class AlertEngine:
 
         if has_anomaly:
             self.consecutive_alerts += 1
-            causes_str = ", ".join(prediction.explanations)
+            causes_str = ", ".join(prediction.anomaly_responsibles)
 
             if self.consecutive_alerts >= 2:
                 self.last_alert_timestamp = current_time
