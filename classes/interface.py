@@ -66,9 +66,9 @@ class Weights(BaseModel):
     dynamic_threshold: float | None = None
 
 class ModelParams(BaseModel):
-    z_threshold: int = 3
-    window_anomaly_ratio: float = 0.2
-    mahalanobis_mean_threshold: float = 3.55
+    window_anomaly_ratio: float = 0.5
+    mahalanobis_mean_threshold: float = 10
+    fault_threshold: int = 20
 
 class AlertEngineParams(BaseModel):
     hours_to_clear: int = 12
