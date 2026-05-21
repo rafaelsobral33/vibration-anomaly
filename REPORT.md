@@ -31,7 +31,6 @@ As a direct consequence of the flawed implementation, which lacks an understandi
 * **Captured Incidents (Recall):** Out of 29 total incidents, the system was only capable of correctly identifying 5 of them, which represents a **17.24%** recall.
 * **False Positives:** The system generated **19** total alerts, of which **73.68%** were *False Positives* — generating almost triple the alerts for normal windows than for faulty ones.
 * **Global F1-Score:** The overall **F1-Score** for all 29 samples tested was **20.83%**.
-Here is the corrected and refined version of your text. I have maintained your structure, improved the flow, and added the requested explanation of Mahalanobis Distance.
 
 ## 2. Methodology
 
@@ -108,11 +107,19 @@ The detailed investigation of the behavior of the model by machine has validated
 
 * **Noise Suppression Validation:** The pipeline implemented in `AlertEngine` has proven its value by suppressing spurious alerts that otherwise would have happened in samples 1 and 8.
 * **The Early Alerts Phenomenon:** In four machines (3, 6, 21, and 26), the failure was identified slightly before the incident window marked in the provided data. In all of these cases, the failure worsened significantly as time passed, and in three of these cases, the re-alert strategy fired within the incident window - marking them as both False Positives and True Positives for the same faulty behavior. This mechanism can be clearly seem in Figure 3, which depicts the pipeline prediction for scenario 21.
-* **False Positive Concentration:** The distribution of the False Positives shows that **13** out of all 19 were concentrated in just 3 files - with a special highlight to sample 5, which had a total of 8. This behavior shows that the model presents a specific hypersensitivity to the particular vibration profiles of these three machines, rather than a general weakness of the algorithm.
-* **Explicability:** For the True Positives, the implementation of the explicability mechanism has shown great correlation with the visual assessment of the actual behavior of the data. This has proven that it was possible to turn the analytical analysis into an actionable notification for the maintainance team with the source of the problem.
 
 ![Figure 3: Re-alert upon escalation within the incident window for scenario 21.](./images/pred_final_realert.png)
 *Figure 3: Re-alert upon escalation within the incident window for scenario 21.*
+
+* **False Positive Concentration:** The distribution of the False Positives shows that **13** out of all 19 were concentrated in just 3 files - with a special highlight to sample 5, which had a total of 8. This behavior shows that the model presents a specific hypersensitivity to the particular vibration profiles of these three machines, rather than a general weakness of the algorithm.
+* **Explicability:** For the True Positives, the implementation of the explicability mechanism has shown great correlation with the visual assessment of the actual behavior of the data, as shown in Figure 4 and Figure 5. This has proven that it was possible to turn the analytical analysis into an actionable notification for the maintainance team with the source of the problem.
+
+![Figure 4: Alert text indicating the source of the anomaly.](./images/anomaly_alert.png)
+*Figure 4: Alert text indicating **acceleration** in the x-axis source of the anomaly for scenario 1.*
+
+![Figure 5: Scenario 1 True Positive showing a significant change in acceleration in the x-axis.](./images/anomaly_image.png)
+*Figure 5: Scenario 1 True Positive showing a significant change in acceleration in the x-axis.*
+
 
 ## 4. Limitations and Future Work
 
